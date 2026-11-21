@@ -1,7 +1,7 @@
 {
   "name": "hello-tryon-web",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -9,10 +9,13 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "vue": "^3.5.44"
+    "pinia": "^2.2.0",
+    "vue": "^3.5.44",
+    "vue-router": "^4.4.0"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.10",
+    "typescript": "^5.5.0",
     "vite": "^8.3.6"
   }
 }
