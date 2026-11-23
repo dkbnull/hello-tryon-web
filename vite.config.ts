@@ -1,4 +1,5 @@
 import vue from '@vitejs/plugin-vue'
+// @ts-ignore
 import { fileURLToPath, URL } from 'node:url'
 import { defineConfig } from 'vite'
 

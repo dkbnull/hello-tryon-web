@@ -4,6 +4,7 @@ import type { Category, ClothingItem, Gender, User } from '@/types'
 
 interface TokenResp {
   token: string
+  refresh_token: string
   user: User
 }
 
