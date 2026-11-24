@@ -12,6 +12,12 @@ const router = createRouter({
       meta: { public: true, title: '登录' },
     },
     {
+      path: '/privacy',
+      name: 'privacy',
+      component: () => import('@/views/PrivacyView.vue'),
+      meta: { public: true, title: '用户隐私协议' },
+    },
+    {
       path: '/',
       name: 'wardrobe',
       component: () => import('@/views/WardrobeView.vue'),

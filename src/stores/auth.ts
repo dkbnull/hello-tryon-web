@@ -32,6 +32,7 @@ export const useAuthStore = defineStore('auth', () => {
     const resp = await api.login(account, password)
     setTokens(resp.token, resp.refresh_token)
     user.value = resp.user
+    return resp
   }
 
   async function register(nickname: string, account: string, password: string, inviteCode: string) {

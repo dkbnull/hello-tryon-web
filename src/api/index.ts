@@ -6,6 +6,7 @@ interface TokenResp {
   token: string
   refresh_token: string
   user: User
+  deletion_cancelled?: boolean
 }
 
 export const api = {
@@ -18,6 +19,8 @@ export const api = {
     patch<User>('/api/auth/me', data),
   changePassword: (old_password: string, new_password: string) =>
     patch<User>('/api/auth/me/password', { old_password, new_password }),
+  /** 申请注销账号：进入 7 天冷静期，期间登录自动取消 */
+  requestDeletion: () => post<{ deletion_at: string }>('/api/auth/me/deletion'),
 
   listItems: () => get<ClothingItem[]>('/api/items'),
   updateItem: (id: number, data: { name?: string; category?: Category }) =>

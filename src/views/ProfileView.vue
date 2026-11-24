@@ -6,6 +6,7 @@ import { useTryonStore } from '@/stores/tryon'
 import { useToast } from '@/composables/toast'
 import { api } from '@/api'
 import type { Gender } from '@/types'
+import ConfirmModal from '@/components/ConfirmModal.vue'
 import tiantianImg from '@/assets/avatars/tiantian.png'
 import kongkongImg from '@/assets/avatars/kongkong.png'
 
@@ -77,6 +78,25 @@ function logout() {
   auth.logout()
   router.replace('/login')
 }
+
+/** 申请注销账号：进入 7 天冷静期，期间登录自动取消 */
+const showDeleteConfirm = ref(false)
+const deleting = ref(false)
+
+async function requestDeletion() {
+  deleting.value = true
+  try {
+    await api.requestDeletion()
+    showDeleteConfirm.value = false
+    auth.logout()
+    router.replace('/login')
+    toast.show('注销申请已提交，7 天后完成；期间登录将自动取消注销')
+  } catch (e) {
+    toast.show(e instanceof Error ? e.message : '操作失败')
+  } finally {
+    deleting.value = false
+  }
+}
 </script>
 
 <template>
@@ -127,12 +147,24 @@ function logout() {
         <button class="btn ghost block cancel-btn" @click="cancelEdit">取消</button>
       </template>
 
-      <!-- 只读态：修改密码 + 退出登录 -->
+      <!-- 只读态：隐私协议 + 修改密码 + 注销账号 + 退出登录 -->
       <template v-else>
+        <button class="btn ghost block" @click="router.push('/privacy')">用户隐私协议</button>
         <button class="btn ghost block" @click="router.push('/password')">修改密码</button>
+        <button class="btn ghost block del-btn" @click="showDeleteConfirm = true">注销账号</button>
         <button class="btn danger block logout" @click="logout">退出登录</button>
       </template>
     </div>
+
+    <ConfirmModal
+      :show="showDeleteConfirm"
+      title="申请注销账号"
+      text="注销后进入 7 天冷静期，期间再次登录将自动取消注销；冷静期结束后，账号与全部衣物数据将被删除且无法恢复。"
+      confirm-text="确认注销"
+      danger
+      @confirm="requestDeletion"
+      @cancel="showDeleteConfirm = false"
+    />
   </div>
 </template>
 
@@ -156,5 +188,6 @@ function logout() {
 .g-card img { width: 44%; height: auto; margin: 4px auto 6px; display: block; }
 .g-card b { font-size: 14px; }
 .cancel-btn { margin-top: 10px; }
-.logout { margin-top: 22px; }
+.del-btn { margin-top: 22px; color: var(--danger); }
+.logout { margin-top: 10px; }
 </style>

@@ -21,6 +21,8 @@ const showConfirm = ref(false)
 
 const form = reactive({ nickname: '', account: '', password: '', confirm: '', invite: '' })
 const errors = reactive({ nickname: '', account: '', password: '', confirm: '', invite: '' })
+/** 隐私协议勾选：登录/注册均须手动勾选后才能提交 */
+const agree = ref(false)
 
 function validate(): boolean {
   errors.nickname = errors.account = errors.password = errors.confirm = errors.invite = ''
@@ -43,8 +45,8 @@ async function submit() {
   submitting.value = true
   try {
     if (mode.value === 'login') {
-      await auth.login(form.account.trim(), form.password)
-      toast.show('欢迎回来，搭配走起 👋')
+      const resp = await auth.login(form.account.trim(), form.password)
+      toast.show(resp.deletion_cancelled ? '欢迎回来，已为你取消账号注销' : '欢迎回来，搭配走起 👋')
     } else {
       await auth.register(form.nickname.trim(), form.account.trim(), form.password, form.invite.trim())
       toast.show('注册成功，已进入你的衣橱')
@@ -72,7 +74,7 @@ function switchMode() {
       <div class="login-logo">
         <img class="mark" :src="logoImg" alt="穿了么">
         <h1>穿了么</h1>
-        <p>拍照入库 · 虚拟人物 · 每日搭配</p>
+        <p>把衣柜装进手机，每天穿出好心情</p>
       </div>
 
       <form @submit.prevent="submit">
@@ -116,7 +118,15 @@ function switchMode() {
           <label>邀请码</label>
           <input v-model="form.invite" placeholder="请输入邀请码" @keyup.enter="submit">
         </div>
-        <button class="btn primary block" type="submit" :disabled="submitting">
+        <!-- 隐私协议：必须手动勾选 -->
+        <div class="agree-row">
+          <label class="agree">
+            <input v-model="agree" type="checkbox">
+            我已阅读并同意
+          </label>
+          <RouterLink class="link" to="/privacy">《用户隐私协议》</RouterLink>
+        </div>
+        <button class="btn primary block" type="submit" :disabled="submitting || !agree">
           {{ submitting ? '请稍候…' : mode === 'login' ? '登录' : '注册并进入' }}
         </button>
       </form>
@@ -141,4 +151,11 @@ function switchMode() {
 .login-foot { padding: 16px 0 0; text-align: center; font-size: 13px; }
 .login-foot + .login-foot { padding: 10px 0 22px; }
 .login-foot .link { color: var(--brand-text); font-weight: 600; }
+.agree-row {
+  display: flex; align-items: center; justify-content: center; gap: 4px;
+  margin: 4px 0 14px; font-size: 13px;
+}
+.agree { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; }
+.agree input { width: 15px; height: 15px; accent-color: var(--brand); cursor: pointer; }
+.agree-row a.link { color: var(--brand-text); font-weight: 600; text-decoration: none; }
 </style>
