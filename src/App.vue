@@ -5,16 +5,18 @@ import { useAuthStore } from '@/stores/auth'
 import { useToast } from '@/composables/toast'
 import tabWardrobeLine from '@/assets/icons/tab-wardrobe_l.png'
 import tabOutfitLine from '@/assets/icons/tab-outfit_l.png'
+import tabCalendarLine from '@/assets/icons/tab-calendar_l.png'
 import tabProfileLine from '@/assets/icons/tab-profile_l.png'
 import tabWardrobeFill from '@/assets/icons/tab-wardrobe_f.png'
 import tabOutfitFill from '@/assets/icons/tab-outfit_f.png'
+import tabCalendarFill from '@/assets/icons/tab-calendar_f.png'
 import tabProfileFill from '@/assets/icons/tab-profile_f.png'
 
 const auth = useAuthStore()
 const toast = useToast()
 const route = useRoute()
 
-// 仅主页面（衣橱/搭配/我的）显示底部导航
+// 仅主页面（衣橱/搭配/日历/我的）显示底部导航
 const showTab = computed(() => route.meta.tab === true)
 
 // 有 token 时预取用户信息（路由守卫只查 token 存在性）
@@ -34,6 +36,11 @@ onMounted(() => auth.fetchMe())
         <i class="ic" :style="{ WebkitMaskImage: `url(${tabOutfitLine})`, maskImage: `url(${tabOutfitLine})` }" />
         <i class="ic fill" :style="{ WebkitMaskImage: `url(${tabOutfitFill})`, maskImage: `url(${tabOutfitFill})` }" />
         <span>搭配</span>
+      </router-link>
+      <router-link to="/calendar" class="tab" active-class="on">
+        <i class="ic" :style="{ WebkitMaskImage: `url(${tabCalendarLine})`, maskImage: `url(${tabCalendarLine})` }" />
+        <i class="ic fill" :style="{ WebkitMaskImage: `url(${tabCalendarFill})`, maskImage: `url(${tabCalendarFill})` }" />
+        <span>日历</span>
       </router-link>
       <router-link to="/profile" class="tab" active-class="on">
         <i class="ic" :style="{ WebkitMaskImage: `url(${tabProfileLine})`, maskImage: `url(${tabProfileLine})` }" />

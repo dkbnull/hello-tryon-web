@@ -1,18 +1,14 @@
 <script setup lang="ts">
 /** 密码强度实时条：按字符类别数评估（1-2 类弱 / 3 类中 / 4 类强），密码为空时隐藏 */
 import { computed } from 'vue'
+import { countCharKinds } from '../utils/validate'
 
 const props = defineProps<{ password: string }>()
 
 const strength = computed(() => {
   const p = props.password
   if (!p) return 0
-  const kinds = [
-    /[A-Z]/.test(p),
-    /[a-z]/.test(p),
-    /\d/.test(p),
-    /[^A-Za-z0-9]/.test(p),
-  ].filter(Boolean).length
+  const kinds = countCharKinds(p)
   return kinds <= 2 ? 1 : kinds === 3 ? 2 : 3
 })
 const LABEL = ['', '弱', '中', '强']

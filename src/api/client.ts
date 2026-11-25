@@ -26,6 +26,7 @@ export function setUnauthorizedHandler(fn: () => void) {
 
 interface ApiError extends Error {
   status?: number
+  code?: string
 }
 
 /** 用刷新令牌换取新令牌对（后端轮换：返回新的 access + refresh） */
@@ -83,23 +84,22 @@ export async function request<T = unknown>(
     }
   }
 
+  const data = (await resp.json().catch(() => null)) as
+    | (T & { code?: string; message?: string })
+    | null
+
+  // 401 清登录态并跳登录页（保留后端返回的错误信息）
   if (resp.status === 401) {
     setTokens(null, null)
     onUnauthorized?.()
-    const err: ApiError = new Error('登录态已失效，请重新登录')
-    err.status = 401
-    throw err
   }
 
-  const data = (await resp.json().catch(() => null)) as
-    | (T & { detail?: string })
-    | null
-
   if (!resp.ok) {
-    const detail =
-      typeof data?.detail === 'string' ? data.detail : `请求失败（${resp.status}）`
-    const err: ApiError = new Error(detail)
+    // 统一错误体 {code, message}
+    const message = data?.message ?? `请求失败（${resp.status}）`
+    const err: ApiError = new Error(message)
     err.status = resp.status
+    err.code = data?.code
     throw err
   }
   return data as T

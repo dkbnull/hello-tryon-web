@@ -59,6 +59,18 @@ const router = createRouter({
       component: () => import('@/views/TryonView.vue'),
       meta: { title: '搭配试穿', tab: true },
     },
+    {
+      path: '/calendar',
+      name: 'calendar',
+      component: () => import('@/views/CalendarView.vue'),
+      meta: { title: '搭配日历', tab: true },
+    },
+    {
+      path: '/outfits/:id',
+      name: 'outfit-detail',
+      component: () => import('@/views/OutfitDetailView.vue'),
+      meta: { title: '搭配回放' },
+    },
   ],
 })
 

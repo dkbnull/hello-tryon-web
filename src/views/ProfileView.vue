@@ -147,12 +147,24 @@ async function requestDeletion() {
         <button class="btn ghost block cancel-btn" @click="cancelEdit">取消</button>
       </template>
 
-      <!-- 只读态：隐私协议 + 修改密码 + 注销账号 + 退出登录 -->
+      <!-- 只读态：设置列表（隐私协议/修改密码）+ 退出登录 + 注销账号 -->
       <template v-else>
-        <button class="btn ghost block" @click="router.push('/privacy')">用户隐私协议</button>
-        <button class="btn ghost block" @click="router.push('/password')">修改密码</button>
-        <button class="btn ghost block del-btn" @click="showDeleteConfirm = true">注销账号</button>
-        <button class="btn danger block logout" @click="logout">退出登录</button>
+        <div class="menu-card">
+          <button class="menu-row" @click="router.push('/privacy')">
+            <span>用户隐私协议</span>
+            <i class="arrow">›</i>
+          </button>
+          <button class="menu-row" @click="router.push('/password')">
+            <span>修改密码</span>
+            <i class="arrow">›</i>
+          </button>
+        </div>
+
+        <div class="menu-card">
+          <button class="menu-row danger" @click="logout">退出登录</button>
+        </div>
+
+        <button class="del-link" @click="showDeleteConfirm = true">注销账号</button>
       </template>
     </div>
 
@@ -188,6 +200,25 @@ async function requestDeletion() {
 .g-card img { width: 44%; height: auto; margin: 4px auto 6px; display: block; }
 .g-card b { font-size: 14px; }
 .cancel-btn { margin-top: 10px; }
-.del-btn { margin-top: 22px; color: var(--danger); }
-.logout { margin-top: 10px; }
+/* 只读态设置列表 */
+.menu-card {
+  margin-top: 26px; background: var(--surface);
+  border: 1px solid var(--border); border-radius: 14px;
+  overflow: hidden; box-shadow: var(--shadow);
+}
+.menu-card + .menu-card { margin-top: 12px; }
+.menu-row {
+  display: flex; align-items: center; width: 100%;
+  padding: 14px 16px; font-size: 15px; text-align: left;
+  background: var(--surface); color: var(--text);
+}
+.menu-row + .menu-row { border-top: 1px solid var(--border); }
+.menu-row:active { background: var(--surface-2); }
+.menu-row .arrow { margin-left: auto; color: var(--muted); font-size: 20px; line-height: 1; font-style: normal; }
+.menu-row.danger { justify-content: center; color: var(--danger); font-weight: 600; }
+.del-link {
+  display: block; margin: 18px auto 0; padding: 6px 14px;
+  font-size: 13px; color: var(--danger); opacity: 0.85;
+}
+.del-link:active { opacity: 0.6; }
 </style>

@@ -5,11 +5,12 @@ import type { Category } from '@/types'
 
 const JEWEL_LIMIT = 3
 
-/** 单件衣物的手动调整：位置偏移（px）与缩放 */
+/** 单件衣物的手动调整：位置偏移（px）、缩放、图层序（z 越大越上层，缺省用部位基础层序） */
 export interface Adjust {
   dx: number
   dy: number
   scale: number
+  z?: number
 }
 
 export const useTryonStore = defineStore('tryon', () => {
@@ -80,5 +81,37 @@ export const useTryonStore = defineStore('tryon', () => {
     for (const k of Object.keys(adjustments)) delete adjustments[Number(k)]
   }
 
-  return { gender, worn, hasWorn, outfitDone, isWorn, toggle, autoUnequip, clear, adj, setAdj, resetAdj }
+  /** 当前搭配快照（保存搭配记录用）：人物性别 + 六部位穿着 + 各衣物手动调整 */
+  function snapshot() {
+    return {
+      gender: gender.value,
+      items: {
+        top: worn.top,
+        bottom: worn.bottom,
+        hat: worn.hat,
+        headwear: worn.headwear,
+        scarf: worn.scarf,
+        jewel: [...worn.jewel],
+      },
+      adjustments: JSON.parse(JSON.stringify(adjustments)) as Record<string, Adjust>,
+    }
+  }
+
+  /** 把搭配记录穿回试穿台：单件部位按替换规则覆盖，首饰合并（保留上限），调整快照一并恢复 */
+  function restore(items: { top: number | null; bottom: number | null; hat: number | null; headwear: number | null; scarf: number | null; jewel: number[] }, adjSnapshot?: Record<string, Adjust>) {
+    worn.top = items.top
+    worn.bottom = items.bottom
+    worn.hat = items.hat
+    worn.headwear = items.headwear
+    worn.scarf = items.scarf
+    worn.jewel = [...items.jewel].slice(0, JEWEL_LIMIT)
+    for (const k of Object.keys(adjustments)) delete adjustments[Number(k)]
+    if (adjSnapshot) {
+      for (const [id, a] of Object.entries(adjSnapshot)) {
+        adjustments[Number(id)] = { dx: a.dx, dy: a.dy, scale: a.scale, z: a.z }
+      }
+    }
+  }
+
+  return { gender, worn, hasWorn, outfitDone, isWorn, toggle, autoUnequip, clear, snapshot, restore, adj, setAdj, resetAdj }
 })

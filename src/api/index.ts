@@ -1,6 +1,6 @@
 /** 业务 API */
 import { del, get, patch, post, upload } from './client'
-import type { Category, ClothingItem, Gender, User } from '@/types'
+import type { Category, ClothingItem, Gender, OutfitRecord, User } from '@/types'
 
 interface TokenResp {
   token: string
@@ -42,6 +42,13 @@ export const api = {
     form.append('conf', String(conf))
     return upload<ClothingItem>('/api/items', form)
   },
+
+  /** 搭配记录：保存快照 / 按月查询 / 详情 / 删除 */
+  saveOutfit: (data: { worn_date: string; gender: Gender; items: OutfitRecord['items']; adjustments: OutfitRecord['adjustments'] }) =>
+    post<OutfitRecord>('/api/outfits', data),
+  listOutfits: (month: string) => get<OutfitRecord[]>(`/api/outfits?month=${month}`),
+  getOutfit: (id: number) => get<OutfitRecord>(`/api/outfits/${id}`),
+  deleteOutfit: (id: number) => del<{ ok: boolean }>(`/api/outfits/${id}`),
 }
 
 /** AI 处理结果（未入库） */

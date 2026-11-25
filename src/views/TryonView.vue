@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { api } from '@/api'
 import AvatarFigure from '@/components/AvatarFigure.vue'
 import ConfirmModal from '@/components/ConfirmModal.vue'
 import { useToast } from '@/composables/toast'
 import { useAuthStore } from '@/stores/auth'
 import { useTryonStore } from '@/stores/tryon'
 import { useWardrobeStore } from '@/stores/wardrobe'
-import { CATEGORIES, catName, type Category, type ClothingItem } from '@/types'
+import { CATEGORIES, SLOT_BOX, BASE_LAYER, type Category, type ClothingItem } from '@/types'
 
 const router = useRouter()
 const tryon = useTryonStore()
@@ -33,16 +34,31 @@ const SLOT_TIPS: Record<Category, string> = {
   jewel: '首饰部位可同时穿戴多件（上限 3）',
 }
 
-/** 各部位在人物身上的覆盖框（百分比，基于 450×800 人物画布）。
- *  衣物按「宽度优先」适配：width 撑满锚点框（对齐人物袖展/腿宽），
- *  高度按图片比例自然延展（长西装/长裙自然下垂）；top 即锚点（肩线/腰线/头顶）。 */
-const SLOT_BOX: Record<Category, { left: number; top: number; width: number }> = {
-  hat: { left: 28, top: 0, width: 44 },
-  headwear: { left: 34, top: 2, width: 32 },
-  top: { left: 25, top: 19, width: 50 },
-  bottom: { left: 32, top: 44, width: 36 },
-  scarf: { left: 31, top: 14, width: 38 },
-  jewel: { left: 38, top: 20, width: 24 },
+/** 保存搭配记录：日期取用户本地日期（YYYY-MM-DD），后端不做时区换算 */
+const saving = ref(false)
+
+function localDate() {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+async function saveOutfit() {
+  if (saving.value) return
+  saving.value = true
+  try {
+    const snap = tryon.snapshot()
+    await api.saveOutfit({
+      worn_date: localDate(),
+      gender: snap.gender,
+      items: snap.items,
+      adjustments: snap.adjustments,
+    })
+    toast.show('已保存搭配，可在日历中回看')
+  } catch {
+    toast.show('保存失败，请重试')
+  } finally {
+    saving.value = false
+  }
 }
 
 const list = computed(() => wardrobe.byCategory(curSlot.value))
@@ -73,6 +89,33 @@ function onDragMove(e: PointerEvent) {
 }
 function onDragEnd() {
   dragging.value = null
+}
+
+/** 衣物层序 key：显式 z（缺省用部位基础层序）为主序，同值时按穿着顺序（DOM 序）打破并列。
+ *  CSS 同 z-index 时 DOM 靠后者在上，故 tie 序与视觉层序一致，保证全序可比较 */
+function layerZ(id: number): number {
+  const i = wornItems.value.findIndex((x) => x.item.id === id)
+  if (i < 0) return 0
+  return (tryon.adj(id).z ?? BASE_LAYER[wornItems.value[i].slot]) * 100 + i
+}
+
+/** 调整图层：按当前层序排序后交换相邻位置并重分配连续 z 值（dir=1 上移一层，dir=-1 下移一层）。
+ *  不直接交换 z 数值——并列 z（如重置后回落基础层序）会让相邻查找失效，排序方案对并列免疫 */
+function shiftLayer(id: number, dir: 1 | -1) {
+  const order = [...wornItems.value].sort((a, b) => layerZ(a.item.id) - layerZ(b.item.id))
+  const idx = order.findIndex((w) => w.item.id === id)
+  const j = idx + dir
+  if (j < 0) {
+    toast.show('已经在最下层了')
+    return
+  }
+  if (j >= order.length) {
+    toast.show('已经在最上层了')
+    return
+  }
+  ;[order[idx], order[j]] = [order[j], order[idx]]
+  order.forEach((w, i) => tryon.setAdj(w.item.id, { z: i }))
+  toast.show(dir === 1 ? '已上移一层（重叠衣物间生效）' : '已下移一层（重叠衣物间生效）')
 }
 
 /** 各部位当前穿着的衣物（ jewellery 多件展开） */
@@ -129,6 +172,14 @@ function switchGender() {
     <div class="appnav">
       <span class="title">搭配试穿</span>
       <span class="spacer" />
+      <button
+        v-if="tryon.outfitDone"
+        class="chip save"
+        :disabled="saving"
+        @click="saveOutfit"
+      >
+        保存搭配
+      </button>
       <button class="chip" @click="tryon.hasWorn ? (showSwitch = true) : switchGender()">
         切换人物
       </button>
@@ -142,7 +193,7 @@ function switchGender() {
           <!-- 衣物层 -->
           <div class="clothes-layer">
             <img
-              v-for="{ slot, item } in wornItems"
+              v-for="({ slot, item }, i) in wornItems"
               :key="`${slot}-${item.id}`"
               class="overlay wear-in"
               :class="{ sel: activeId === item.id }"
@@ -152,6 +203,7 @@ function switchGender() {
                 left: SLOT_BOX[slot].left + '%',
                 top: SLOT_BOX[slot].top + '%',
                 width: SLOT_BOX[slot].width + '%',
+                zIndex: (tryon.adj(item.id).z ?? BASE_LAYER[slot]) * 100 + i,
                 transform: `translate(${tryon.adj(item.id).dx}px, ${tryon.adj(item.id).dy}px) scale(${tryon.adj(item.id).scale})`,
               }"
               @pointerdown="onDragStart($event, item.id)"
@@ -169,26 +221,35 @@ function switchGender() {
                 left: SLOT_BOX[l.slot].left + '%',
                 top: SLOT_BOX[l.slot].top + '%',
                 width: SLOT_BOX[l.slot].width + '%',
+                zIndex: BASE_LAYER[l.slot],
               }"
             >
           </div>
         </div>
       </div>
 
-      <!-- 手动调整工具条：点选衣物后出现 -->
+      <!-- 手动调整工具条：点选衣物后出现（三行：提示+完成 / 缩放+重置 / 图层调整） -->
       <div v-if="activeItem && activeAdj" class="adj-bar">
-        <span class="hint">拖动衣物调位置 · 缩放</span>
-        <input
-          type="range"
-          min="0.5"
-          max="1.6"
-          step="0.05"
-          :value="activeAdj.scale"
-          :aria-label="`缩放 ${activeItem.item.name}`"
-          @input="tryon.setAdj(activeItem.item.id, { scale: Number(($event.target as HTMLInputElement).value) })"
-        >
-        <button class="chip" @click="tryon.resetAdj(activeItem.item.id)">重置</button>
-        <button class="chip" @click="activeId = null">完成</button>
+        <div class="adj-row">
+          <span class="hint">拖动调位置 · 调图层</span>
+          <button class="chip" @click="activeId = null">完成</button>
+        </div>
+        <div class="adj-row">
+          <input
+            type="range"
+            min="0.5"
+            max="1.6"
+            step="0.05"
+            :value="activeAdj.scale"
+            :aria-label="`缩放 ${activeItem.item.name}`"
+            @input="tryon.setAdj(activeItem.item.id, { scale: Number(($event.target as HTMLInputElement).value) })"
+          >
+          <button class="chip" @click="tryon.resetAdj(activeItem.item.id)">重置</button>
+        </div>
+        <div class="adj-row">
+          <button class="chip grow" :aria-label="`上移一层 ${activeItem.item.name}`" @click="shiftLayer(activeItem.item.id, 1)">上移一层</button>
+          <button class="chip grow" :aria-label="`下移一层 ${activeItem.item.name}`" @click="shiftLayer(activeItem.item.id, -1)">下移一层</button>
+        </div>
       </div>
 
       <!-- 已穿标签条 -->
@@ -252,6 +313,7 @@ function switchGender() {
 
 <style scoped>
 .appnav .chip { background: var(--brand); color: #fff; }
+.appnav .chip:disabled { opacity: 0.6; }
 .stage-inner { position: relative; width: min(64vw, 240px); margin: 0 auto; }
 /* 衣物层夹在人物身前层与身后层之间 */
 .clothes-layer {
@@ -267,11 +329,15 @@ function switchGender() {
 .overlay:active { cursor: grabbing; }
 .overlay.sel { outline: 2px dashed var(--brand); outline-offset: 6px; border-radius: 8px; }
 .adj-bar {
-  display: flex; align-items: center; gap: 10px;
-  margin: 8px auto 0; padding: 8px 14px; max-width: 340px;
+  display: flex; flex-direction: column; gap: 6px;
+  margin: 8px auto 0; padding: 10px 14px; max-width: 340px;
   background: var(--surface); border: 1px solid var(--border);
   border-radius: 12px; box-shadow: var(--shadow);
 }
-.adj-bar input[type='range'] { flex: 1; accent-color: var(--brand); }
+.adj-row { display: flex; align-items: center; gap: 8px; }
+.adj-row .hint { flex: 1; white-space: nowrap; }
+.adj-row input[type='range'] { flex: 1; min-width: 0; accent-color: var(--brand); }
+.adj-bar .chip { flex-shrink: 0; }
+.adj-bar .chip.grow { flex: 1; }
 .done-chip { background: var(--brand); color: #fff; border-color: var(--brand); }
 </style>

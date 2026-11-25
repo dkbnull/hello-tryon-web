@@ -41,7 +41,7 @@ function validate(): boolean {
 }
 
 async function submit() {
-  if (submitting.value || !validate()) return
+  if (submitting.value || !agree.value || !validate()) return
   submitting.value = true
   try {
     if (mode.value === 'login') {
